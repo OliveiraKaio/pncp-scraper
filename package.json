@@ -4,15 +4,13 @@
   "description": "Scraper diário de editais do PNCP com detalhamento e consolidação.",
   "main": "index.js",
   "scripts": {
-  "coletar": "node scripts/buscarLista.js && node scripts/buscarDetalhes.js && node scripts/atualizarCompleto.js",
-  "instalar-navegador": "npx puppeteer install"
-},
-
+    "coletar": "node scripts/buscarLista.js && node scripts/buscarDetalhes.js && node scripts/atualizarCompleto.js",
+    "instalar-navegador": "npx puppeteer install"
+  },
   "author": "",
   "license": "MIT",
   "dependencies": {
     "dayjs": "^1.11.9",
-    "fs": "^0.0.1-security",
     "fs-extra": "^11.2.0",
     "puppeteer": "^24.9.0"
   }

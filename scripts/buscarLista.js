@@ -8,8 +8,8 @@ const modoTeste = false;
 async function coletarTodosEditais() {
   const dataHoje = dayjs().format('YYYY-MM-DD');
   const pastaDestino = path.join(__dirname, '..', 'dados', dataHoje);
-
   await fs.ensureDir(pastaDestino);
+
   const resultados = [];
   let pagina = 1;
   const maxPaginas = modoTeste ? 3 : 9999;
@@ -33,7 +33,7 @@ async function coletarTodosEditais() {
 
   while (pagina <= maxPaginas) {
     const url = `https://pncp.gov.br/app/editais?pagina=${pagina}`;
-    console.log(`Coletando página ${pagina}...`);
+    console.log(`🔎 Coletando página ${pagina}: ${url}`);
 
     try {
       const response = await page.goto(url, {
@@ -41,12 +41,12 @@ async function coletarTodosEditais() {
         timeout: 60000
       });
 
-      // Verifica status HTTP
       if (!response || !response.ok()) {
-        throw new Error(`Status HTTP inválido: ${response?.status()}`);
+        console.warn(`⚠️ Status HTTP não OK na página ${pagina}: ${response?.status()}`);
+        break;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Aguarda 2s para garantir carregamento
 
       const editais = await page.evaluate(() => {
         const cards = Array.from(document.querySelectorAll('a.br-item'));
@@ -69,21 +69,21 @@ async function coletarTodosEditais() {
             orgao,
             local,
             objeto,
-            linkDetalhe: 'https://pncp.gov.br' + href
+            linkDetalhe: href ? 'https://pncp.gov.br' + href : null
           };
         });
       });
 
       if (!editais || editais.length === 0) {
-        console.log('Nenhum edital encontrado nesta página.');
+        console.log('📭 Nenhum edital encontrado nesta página. Encerrando...');
         break;
-      } else {
-        resultados.push(...editais);
       }
 
+      resultados.push(...editais);
       pagina++;
+
     } catch (err) {
-      console.error(`Erro na página ${pagina}:`, err.message);
+      console.error(`❌ Erro ao processar página ${pagina}: ${err.message}`);
       break;
     }
   }
@@ -92,8 +92,12 @@ async function coletarTodosEditais() {
 
   const caminhoFinal = path.join(pastaDestino, 'editais_lista.json');
   await fs.writeJson(caminhoFinal, resultados, { spaces: 2 });
-  console.log(`Coleta finalizada. Total de editais: ${resultados.length}`);
-  console.log(`Salvo em: ${caminhoFinal}`);
+
+  console.log(`✅ Coleta finalizada. Total de editais: ${resultados.length}`);
+  console.log(`📁 Arquivo salvo em: ${caminhoFinal}`);
 }
 
-coletarTodosEditais();
+coletarTodosEditais().catch(err => {
+  console.error('❌ Erro fatal durante a coleta:', err.message);
+  process.exit(1);
+});

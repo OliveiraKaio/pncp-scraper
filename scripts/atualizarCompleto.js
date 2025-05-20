@@ -4,36 +4,44 @@ const dayjs = require('dayjs');
 
 async function atualizarCompleto() {
   const dataHoje = dayjs().format('YYYY-MM-DD');
-  const pastaData = path.join('data', dataHoje);
+  const pastaBase = path.resolve(__dirname, '..', 'dados'); // Corrige o caminho base
+  const pastaData = path.join(pastaBase, dataHoje);
 
-  // 1. Remove todas as pastas dentro de "data/", exceto a do dia atual
-  const dataDir = path.resolve('data');
-  if (fs.existsSync(dataDir)) {
-    const pastas = fs.readdirSync(dataDir);
+  // 1. Remove pastas antigas, exceto a do dia atual
+  if (await fs.pathExists(pastaBase)) {
+    const pastas = await fs.readdir(pastaBase);
     for (const pasta of pastas) {
-      const fullPath = path.join(dataDir, pasta);
-      if (fs.lstatSync(fullPath).isDirectory() && pasta !== dataHoje) {
-        fs.removeSync(fullPath);
+      const fullPath = path.join(pastaBase, pasta);
+      const isDir = (await fs.lstat(fullPath)).isDirectory();
+      if (isDir && pasta !== dataHoje) {
+        await fs.remove(fullPath);
         console.log(`Pasta antiga removida: ${pasta}`);
       }
     }
   }
 
-  // 2. Cria nova pasta para hoje
-  fs.ensureDirSync(pastaData);
+  // 2. Garante a pasta de hoje
+  await fs.ensureDir(pastaData);
 
-  // 3. Copia os arquivos JSON para a pasta do dia atual
-  fs.copyFileSync('editais_lista.json', path.join(pastaData, 'editais_lista.json'));
-  fs.copyFileSync('editais_detalhados.json', path.join(pastaData, 'editais_detalhados.json'));
+  // 3. Verifica e copia os arquivos de origem
+  const listaPath = path.resolve('editais_lista.json');
+  const detalhadosPath = path.resolve('editais_detalhados.json');
 
-  // 4. Atualiza o arquivo completo.json (exemplo: sobrescreve com os dados do dia)
-  const detalhados = JSON.parse(fs.readFileSync('editais_detalhados.json'));
-  fs.writeFileSync('completo.json', JSON.stringify(detalhados, null, 2));
+  if (!(await fs.pathExists(listaPath)) || !(await fs.pathExists(detalhadosPath))) {
+    throw new Error('Arquivos editais_lista.json ou editais_detalhados.json não encontrados na raiz.');
+  }
+
+  await fs.copy(listaPath, path.join(pastaData, 'editais_lista.json'));
+  await fs.copy(detalhadosPath, path.join(pastaData, 'editais_detalhados.json'));
+
+  // 4. Atualiza completo.json
+  const detalhados = await fs.readJson(detalhadosPath);
+  await fs.writeJson('completo.json', detalhados, { spaces: 2 });
 
   console.log(`Atualização completa para ${dataHoje}.`);
 }
 
 atualizarCompleto().catch(err => {
-  console.error('Erro ao atualizar completo:', err);
+  console.error('Erro ao atualizar completo:', err.message);
   process.exit(1);
 });

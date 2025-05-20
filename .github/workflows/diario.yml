@@ -19,9 +19,9 @@ jobs:
           node-version: '18'
 
       - name: Instalar dependências
-        run: npm install
+        run: npm ci
 
-      - name: Instalar navegador para o Puppeteer
+      - name: Garantir instalação do navegador
         run: npx puppeteer install
 
       - name: Executar todos os scripts de coleta
@@ -37,4 +37,3 @@ jobs:
           else
             git commit -m "Atualização diária automática"
             git push
-          fi
