@@ -21,8 +21,8 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
-      - name: Instalar navegador do Puppeteer
-        run: npm run instalar-navegador
+      - name: Instalar navegador para o Puppeteer
+        run: npx puppeteer install
 
       - name: Executar todos os scripts de coleta
         run: npm run coletar
