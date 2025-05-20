@@ -1,17 +1,15 @@
 {
   "name": "pncp-scraper",
   "version": "1.0.0",
-  "description": "Scraper diário de editais do PNCP com detalhamento e consolidação.",
-  "main": "index.js",
+  "description": "Scraper PNCP + API Node",
+  "main": "server.js",
   "scripts": {
-    "coletar": "node scripts/buscarLista.js && node scripts/buscarDetalhes.js && node scripts/atualizarCompleto.js",
-    "instalar-navegador": "npx puppeteer install"
+    "start": "node server.js"
   },
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "dayjs": "^1.11.9",
+    "express": "^4.18.2",
     "fs-extra": "^11.2.0",
-    "puppeteer": "^24.9.0"
+    "puppeteer": "^21.3.8"
   }
 }
