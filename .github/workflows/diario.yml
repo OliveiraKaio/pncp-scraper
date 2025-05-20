@@ -2,7 +2,7 @@ name: Coleta diária PNCP
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Todos os dias às 06:00 UTC
+    - cron: '0 6 * * *'  # Executa diariamente às 06:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -22,19 +22,19 @@ jobs:
         run: npm install
 
       - name: Executar buscarLista.js
-        run: node buscarLista.js
+        run: node scripts/buscarLista.js
 
       - name: Executar buscarDetalhes.js
-        run: node buscarDetalhes.js
+        run: node scripts/buscarDetalhes.js
 
       - name: Executar atualizarCompleto.js
-        run: node atualizarCompleto.js
+        run: node scripts/atualizarCompleto.js
 
       - name: Commit e push de novos dados
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add data/
-          git commit -m "Atualização diária automática"
+          git diff --cached --quiet || git commit -m "Atualização diária automática"
           git push
         continue-on-error: true
