@@ -1,27 +1,22 @@
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
+// Rota padrão só para teste
+app.get('/', (req, res) => {
+  res.send('Servidor PNCP ativo. Use /buscar para iniciar a coleta.');
+});
+
+// Sua rota de coleta (exemplo)
 app.get('/buscar', async (req, res) => {
   try {
-    const { exec } = require('child_process');
-    exec('node scripts/buscarLista.js', (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Erro: ${error.message}`);
-        return res.status(500).send(error.message);
-      }
-      if (stderr) {
-        console.error(`Stderr: ${stderr}`);
-        return res.status(500).send(stderr);
-      }
-      console.log(`Saída: ${stdout}`);
-      res.send('✅ Execução iniciada:\n' + stdout);
-    });
+    const resultado = await require('./scripts/buscarLista');
+    res.send('Coleta finalizada!');
   } catch (err) {
-    res.status(500).send('❌ Erro na execução: ' + err.message);
+    res.status(500).send('Erro na coleta: ' + err.message);
   }
 });
 
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
+app.listen(PORT, () => {
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
