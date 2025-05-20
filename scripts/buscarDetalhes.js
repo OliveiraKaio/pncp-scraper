@@ -4,7 +4,7 @@ const path = require('path');
 const dayjs = require('dayjs');
 
 // ✅ Altere para false para rodar em modo completo
-const modoTeste = true;
+const modoTeste = false;
 
 (async () => {
   const dataHoje = dayjs().format('YYYY-MM-DD');
