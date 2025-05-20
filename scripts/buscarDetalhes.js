@@ -3,7 +3,6 @@ const fs = require('fs-extra');
 const path = require('path');
 const dayjs = require('dayjs');
 
-// ✅ Altere para false para rodar em modo completo
 const modoTeste = false;
 
 (async () => {
@@ -23,7 +22,6 @@ const modoTeste = false;
   const editaisParaProcessar = modoTeste ? listaEditais.slice(0, 10) : listaEditais;
   console.log(`Modo ${modoTeste ? 'teste' : 'completo'} ativado. Total a processar: ${editaisParaProcessar.length}`);
 
-  // ✅ Adicionado args para GitHub Actions e ambientes CI
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -36,8 +34,17 @@ const modoTeste = false;
     const edital = editaisParaProcessar[i];
     console.log(`Detalhando edital ${i + 1}/${editaisParaProcessar.length}`);
 
+    if (!edital.linkDetalhe || !edital.linkDetalhe.startsWith('https://pncp.gov.br/editais/')) {
+      console.warn(`Link inválido ignorado: ${edital.linkDetalhe}`);
+      continue;
+    }
+
     try {
-      await page.goto(edital.linkDetalhe, { waitUntil: 'networkidle2', timeout: 60000 });
+      await page.goto(edital.linkDetalhe, {
+        waitUntil: 'networkidle2',
+        timeout: 120000 // 2 minutos
+      });
+
       await new Promise(resolve => setTimeout(resolve, 2000)); // Delay manual
 
       const detalhes = await page.evaluate(() => {

@@ -10,6 +10,14 @@ async function coletarTodosEditais() {
   const pastaDestino = path.join(__dirname, '..', 'dados', dataHoje);
   await fs.ensureDir(pastaDestino);
 
+  const caminhoFinal = path.join(pastaDestino, 'editais_lista.json');
+  
+  // ✅ Ignora se o arquivo do dia já existir
+  if (await fs.pathExists(caminhoFinal)) {
+    console.log(`🛑 Arquivo já existe: ${caminhoFinal}. Pulando coleta.`);
+    return;
+  }
+
   const resultados = [];
   let pagina = 1;
   const maxPaginas = modoTeste ? 3 : 9999;
@@ -46,7 +54,7 @@ async function coletarTodosEditais() {
         break;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Aguarda 2s para garantir carregamento
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Aguarda 2s
 
       const editais = await page.evaluate(() => {
         const cards = Array.from(document.querySelectorAll('a.br-item'));
@@ -89,8 +97,6 @@ async function coletarTodosEditais() {
   }
 
   await browser.close();
-
-  const caminhoFinal = path.join(pastaDestino, 'editais_lista.json');
   await fs.writeJson(caminhoFinal, resultados, { spaces: 2 });
 
   console.log(`✅ Coleta finalizada. Total de editais: ${resultados.length}`);
