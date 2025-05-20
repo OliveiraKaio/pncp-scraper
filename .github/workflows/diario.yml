@@ -1,0 +1,40 @@
+name: Coleta diária PNCP
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Todos os dias às 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  coleta-pncp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Executar buscarLista.js
+        run: node buscarLista.js
+
+      - name: Executar buscarDetalhes.js
+        run: node buscarDetalhes.js
+
+      - name: Executar atualizarCompleto.js
+        run: node atualizarCompleto.js
+
+      - name: Commit e push de novos dados
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/
+          git commit -m "Atualização diária automática"
+          git push
+        continue-on-error: true
