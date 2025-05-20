@@ -1,12 +1,23 @@
-// scripts/buscarDetalhes.js
 const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
 const dayjs = require('dayjs');
+const path = require('path');
 
 (async () => {
   const dataHoje = dayjs().format('YYYY-MM-DD');
-  const pasta = `dados/${dataHoje}`;
-  const listaPath = `${pasta}/editais_lista.json`;
+  const pasta = path.join(__dirname, '..', 'dados', dataHoje);
+
+  // Garante que a pasta exista
+  await fs.ensureDir(pasta);
+
+  const listaPath = path.join(pasta, 'editais_lista.json');
+
+  // Verifica se o arquivo de lista existe
+  if (!await fs.pathExists(listaPath)) {
+    console.error(`Arquivo não encontrado: ${listaPath}`);
+    process.exit(1);
+  }
+
   const listaEditais = await fs.readJson(listaPath);
   const resultados = [];
 
@@ -26,7 +37,7 @@ const dayjs = require('dayjs');
         const texto = document.body.innerText;
 
         function extrairTexto(label) {
-          const regex = new RegExp(`${label}\s*:\s*(.*?)\n`);
+          const regex = new RegExp(`${label}\\s*:\\s*(.*?)\\n`);
           return texto.match(regex)?.[1]?.trim();
         }
 
@@ -83,7 +94,7 @@ const dayjs = require('dayjs');
     }
   }
 
-  await browser.close();
-  await fs.writeJson(`${pasta}/editais_detalhados.json`, resultados, { spaces: 2 });
-  console.log(`Salvo em ${pasta}/editais_detalhados.json - Total: ${resultados.length}`);
+  const pathDetalhes = path.join(pasta, 'editais_detalhados.json');
+  await fs.writeJson(pathDetalhes, resultados, { spaces: 2 });
+  console.log(`Salvo em ${pathDetalhes} - Total: ${resultados.length}`);
 })();
