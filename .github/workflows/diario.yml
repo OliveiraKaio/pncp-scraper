@@ -19,24 +19,19 @@ jobs:
           node-version: '18'
 
       - name: Instalar dependências
-        run: |
-          npm install
-          npm audit fix --force
+        run: npm install
 
-      - name: Executar buscarLista.js
-        run: node scripts/buscarLista.js
-
-      - name: Executar buscarDetalhes.js
-        run: node scripts/buscarDetalhes.js
-
-      - name: Executar atualizarCompleto.js
-        run: node scripts/atualizarCompleto.js
+      - name: Executar todos os scripts de coleta
+        run: npm run coletar
 
       - name: Commit e push de novos dados
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add data/
-          git commit -m "Atualização diária automática"
-          git push
-        continue-on-error: true
+          git add dados/
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração detectada."
+          else
+            git commit -m "Atualização diária automática"
+            git push
+          fi

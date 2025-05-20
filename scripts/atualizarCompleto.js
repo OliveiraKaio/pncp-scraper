@@ -2,79 +2,38 @@ const fs = require('fs-extra');
 const path = require('path');
 const dayjs = require('dayjs');
 
-(async () => {
-  const dadosDir = path.join(__dirname, '..', 'dados');
-  const completoPath = path.join(dadosDir, 'completo.json');
-  const hoje = dayjs().format('YYYY-MM-DD');
-  const detalhadoHoje = path.join(dadosDir, hoje, 'editais_detalhados.json');
+async function atualizarCompleto() {
+  const dataHoje = dayjs().format('YYYY-MM-DD');
+  const pastaData = path.join('data', dataHoje);
 
-  try {
-    await fs.ensureDir(dadosDir);
-
-    let completos = [];
-    let novosHoje = [];
-
-    if (await fs.pathExists(completoPath)) {
-      try {
-        completos = await fs.readJson(completoPath);
-        if (!Array.isArray(completos)) {
-          console.warn(`Arquivo ${completoPath} não é um array. Será reinicializado.`);
-          completos = [];
-        }
-      } catch (err) {
-        console.error(`Erro ao ler ${completoPath}:`, err.message);
-        completos = [];
+  // 1. Remove todas as pastas dentro de "data/", exceto a do dia atual
+  const dataDir = path.resolve('data');
+  if (fs.existsSync(dataDir)) {
+    const pastas = fs.readdirSync(dataDir);
+    for (const pasta of pastas) {
+      const fullPath = path.join(dataDir, pasta);
+      if (fs.lstatSync(fullPath).isDirectory() && pasta !== dataHoje) {
+        fs.removeSync(fullPath);
+        console.log(`Pasta antiga removida: ${pasta}`);
       }
     }
-
-    if (await fs.pathExists(detalhadoHoje)) {
-      let editaisHoje = [];
-
-      try {
-        editaisHoje = await fs.readJson(detalhadoHoje);
-        if (!Array.isArray(editaisHoje)) {
-          throw new Error('O arquivo não contém uma lista de editais');
-        }
-      } catch (err) {
-        console.error(`Erro ao ler ${detalhadoHoje}:`, err.message);
-        return;
-      }
-
-      const idsExistentes = new Set(completos.map(e => e.idPNCP || e.linkDetalhe));
-
-      novosHoje = editaisHoje.filter(edital => {
-        const id = edital.idPNCP || edital.linkDetalhe;
-        return !idsExistentes.has(id);
-      });
-
-      if (novosHoje.length > 0) {
-        completos.push(...novosHoje);
-
-        try {
-          await fs.writeJson(completoPath, completos, { spaces: 2 });
-          console.log(`Adicionados ${novosHoje.length} novos editais ao completo.json.`);
-        } catch (err) {
-          console.error('Erro ao salvar o arquivo completo.json:', err.message);
-        }
-
-        // Validação da integridade do arquivo salvo
-        try {
-          const verificado = await fs.readJson(completoPath);
-          if (!Array.isArray(verificado)) {
-            throw new Error('O conteúdo salvo não é um array válido.');
-          }
-        } catch (err) {
-          console.error('Erro ao verificar integridade do completo.json:', err.message);
-        }
-      } else {
-        console.log('Nenhum edital novo encontrado hoje.');
-      }
-
-      console.log(`Total no completo.json agora: ${completos.length}`);
-    } else {
-      console.warn(`Arquivo do dia ${hoje} não encontrado: ${detalhadoHoje}`);
-    }
-  } catch (err) {
-    console.error('Erro inesperado ao atualizar o completo.json:', err.message);
   }
-})();
+
+  // 2. Cria nova pasta para hoje
+  fs.ensureDirSync(pastaData);
+
+  // 3. Copia os arquivos JSON para a pasta do dia atual
+  fs.copyFileSync('editais_lista.json', path.join(pastaData, 'editais_lista.json'));
+  fs.copyFileSync('editais_detalhados.json', path.join(pastaData, 'editais_detalhados.json'));
+
+  // 4. Atualiza o arquivo completo.json (exemplo: sobrescreve com os dados do dia)
+  const detalhados = JSON.parse(fs.readFileSync('editais_detalhados.json'));
+  fs.writeFileSync('completo.json', JSON.stringify(detalhados, null, 2));
+
+  console.log(`Atualização completa para ${dataHoje}.`);
+}
+
+atualizarCompleto().catch(err => {
+  console.error('Erro ao atualizar completo:', err);
+  process.exit(1);
+});

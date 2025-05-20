@@ -3,7 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const dayjs = require('dayjs');
 
-const modoTeste = false;
+const modoTeste = true;
 
 async function coletarTodosEditais() {
   const dataHoje = dayjs().format('YYYY-MM-DD');
