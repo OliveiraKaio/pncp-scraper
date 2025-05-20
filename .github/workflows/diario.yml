@@ -2,7 +2,7 @@ name: Coleta diária PNCP
 
 on:
   schedule:
-    - cron: '0 6 * * 1-5'  # Segunda a sexta às 06:00 UTC
+    - cron: '0 6 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -20,6 +20,9 @@ jobs:
 
       - name: Instalar dependências
         run: npm install
+
+      - name: Instalar navegador do Puppeteer
+        run: npx puppeteer install
 
       - name: Executar todos os scripts de coleta
         run: npm run coletar
