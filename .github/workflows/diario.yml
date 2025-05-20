@@ -21,6 +21,11 @@ jobs:
       - name: Instalar dependências
         run: npm install
 
+      # Garantir que o Chrome do Puppeteer está disponível (caso use puppeteer-core)
+      # Remova este passo se você usa o pacote 'puppeteer' completo com navegador embutido
+      # - name: Instalar Chrome para Puppeteer
+      #   run: npx puppeteer browsers install chrome
+
       - name: Executar todos os scripts de coleta
         run: npm run coletar
 
