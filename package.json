@@ -9,8 +9,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "puppeteer": "^21.3.8",
+    "dayjs": "^1.11.9",
     "fs-extra": "^11.2.0",
-    "dayjs": "^1.11.9"
+    "puppeteer": "^24.8.2"
   }
 }
