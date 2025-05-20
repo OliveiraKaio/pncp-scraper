@@ -1,21 +1,27 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-const buscarLista = require('./scripts/buscarLista');
-
-app.get('/', async (req, res) => {
-  const modoTeste = req.query.teste === 'true';
-  console.log(`🟢 Requisição recebida. modoTeste: ${modoTeste}`);
+app.get('/buscar', async (req, res) => {
   try {
-    await buscarLista({ modoTeste });
-    res.send('✅ Execução do buscarLista finalizada.');
+    const { exec } = require('child_process');
+    exec('node scripts/buscarLista.js', (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Erro: ${error.message}`);
+        return res.status(500).send(error.message);
+      }
+      if (stderr) {
+        console.error(`Stderr: ${stderr}`);
+        return res.status(500).send(stderr);
+      }
+      console.log(`Saída: ${stdout}`);
+      res.send('✅ Execução iniciada:\n' + stdout);
+    });
   } catch (err) {
-    console.error('Erro na execução do buscarLista:', err);
-    res.status(500).send('Erro na execução.');
+    res.status(500).send('❌ Erro na execução: ' + err.message);
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor ouvindo na porta ${PORT}`);
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });
