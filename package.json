@@ -10,7 +10,8 @@
   "license": "MIT",
   "dependencies": {
     "dayjs": "^1.11.9",
+    "fs": "^0.0.1-security",
     "fs-extra": "^11.2.0",
-    "puppeteer": "^24.8.2"
+    "puppeteer": "^24.9.0"
   }
 }

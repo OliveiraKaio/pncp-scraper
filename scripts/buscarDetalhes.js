@@ -1,15 +1,16 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
-const dayjs = require('dayjs');
 const path = require('path');
+const dayjs = require('dayjs');
+
+// ✅ Altere para false para rodar em modo completo
+const modoTeste = false;
 
 (async () => {
   const dataHoje = dayjs().format('YYYY-MM-DD');
   const pasta = path.join(__dirname, '..', 'dados', dataHoje);
-
-  await fs.ensureDir(pasta); // Garante que a pasta existe
-
   const listaPath = path.join(pasta, 'editais_lista.json');
+  const resultadoPath = path.join(pasta, 'editais_detalhados.json');
 
   if (!await fs.pathExists(listaPath)) {
     console.error(`Arquivo não encontrado: ${listaPath}`);
@@ -19,17 +20,20 @@ const path = require('path');
   const listaEditais = await fs.readJson(listaPath);
   const resultados = [];
 
+  const editaisParaProcessar = modoTeste ? listaEditais.slice(0, 10) : listaEditais;
+  console.log(`Modo ${modoTeste ? 'teste' : 'completo'} ativado. Total a processar: ${editaisParaProcessar.length}`);
+
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
-  await page.setUserAgent('Mozilla/5.0');
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
 
-  for (let i = 0; i < listaEditais.length; i++) {
-    const edital = listaEditais[i];
-    console.log(`Detalhando edital ${i + 1}/${listaEditais.length}`);
+  for (let i = 0; i < editaisParaProcessar.length; i++) {
+    const edital = editaisParaProcessar[i];
+    console.log(`Detalhando edital ${i + 1}/${editaisParaProcessar.length}`);
 
     try {
       await page.goto(edital.linkDetalhe, { waitUntil: 'networkidle2', timeout: 60000 });
-      await page.waitForTimeout(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Delay manual
 
       const detalhes = await page.evaluate(() => {
         const texto = document.body.innerText;
@@ -87,12 +91,13 @@ const path = require('path');
       });
 
       resultados.push({ ...edital, ...detalhes });
+
     } catch (err) {
       console.error(`Erro ao acessar ${edital.linkDetalhe}:`, err.message);
     }
   }
 
-  const pathDetalhes = path.join(pasta, 'editais_detalhados.json');
-  await fs.writeJson(pathDetalhes, resultados, { spaces: 2 });
-  console.log(`Salvo em ${pathDetalhes} - Total: ${resultados.length}`);
+  await browser.close();
+  await fs.writeJson(resultadoPath, resultados, { spaces: 2 });
+  console.log(`Salvo em ${resultadoPath} - Total: ${resultados.length}`);
 })();

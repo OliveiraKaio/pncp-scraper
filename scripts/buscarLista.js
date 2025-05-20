@@ -1,100 +1,99 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
-const dayjs = require('dayjs');
 const path = require('path');
+const dayjs = require('dayjs');
 
-(async () => {
+const modoTeste = false;
+
+async function coletarTodosEditais() {
   const dataHoje = dayjs().format('YYYY-MM-DD');
-  const pasta = path.join(__dirname, '..', 'dados', dataHoje);
+  const pastaDestino = path.join(__dirname, '..', 'dados', dataHoje);
 
-  // Garante que a pasta exista
-  await fs.ensureDir(pasta);
-
-  const listaPath = path.join(pasta, 'editais_lista.json');
-
-  // Verifica se o arquivo de lista existe
-  if (!await fs.pathExists(listaPath)) {
-    console.error(`Arquivo não encontrado: ${listaPath}`);
-    process.exit(1);
-  }
-
-  const listaEditais = await fs.readJson(listaPath);
+  await fs.ensureDir(pastaDestino);
   const resultados = [];
+  let pagina = 1;
+  const maxPaginas = modoTeste ? 3 : 9999;
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1920,1080'
+    ]
+  });
+
   const page = await browser.newPage();
-  await page.setUserAgent('Mozilla/5.0');
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+  });
 
-  for (let i = 0; i < listaEditais.length; i++) {
-    const edital = listaEditais[i];
-    console.log(`Detalhando edital ${i + 1}/${listaEditais.length}`);
+  while (pagina <= maxPaginas) {
+    const url = `https://pncp.gov.br/app/editais?pagina=${pagina}`;
+    console.log(`Coletando página ${pagina}...`);
 
     try {
-      await page.goto(edital.linkDetalhe, { waitUntil: 'networkidle2', timeout: 60000 });
-      await page.waitForTimeout(2000);
-
-      const detalhes = await page.evaluate(() => {
-        const texto = document.body.innerText;
-
-        function extrairTexto(label) {
-          const regex = new RegExp(`${label}\\s*:\\s*(.*?)\\n`);
-          return texto.match(regex)?.[1]?.trim();
-        }
-
-        const cnpj = extrairTexto('CNPJ');
-        const local = extrairTexto('Local');
-        const orgao = extrairTexto('Órgão');
-        const unidadeCompradora = texto.match(/Unidade compradora:\s*(.*?)\n/)?.[1]?.trim();
-        const modalidade = extrairTexto('Modalidade da contratação');
-        const tipo = extrairTexto('Tipo');
-        const modoDisputa = extrairTexto('Modo de disputa');
-        const registroPreco = extrairTexto('Registro de preço');
-        const fonteOrcamentaria = extrairTexto('Fonte orçamentária');
-        const dataDivulgacao = extrairTexto('Data de divulgação no PNCP');
-        const situacao = extrairTexto('Situação');
-        const dataInicioRecebimento = texto.match(/Data de início de recebimento de propostas:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1];
-        const dataFimRecebimento = texto.match(/Data fim de recebimento de propostas:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1];
-        const valorTotal = texto.match(/VALOR TOTAL ESTIMADO DA COMPRA\s*R\$\s*([\d.,]+)/)?.[1];
-        const objetoDetalhado = document.querySelector('.conteudo-objeto')?.innerText.trim();
-
-        const itens = Array.from(document.querySelectorAll('datatable-body-row')).map(row => {
-          const colunas = row.querySelectorAll('datatable-body-cell');
-          return {
-            numero: colunas[0]?.innerText.trim(),
-            descricao: colunas[1]?.innerText.trim(),
-            quantidade: colunas[2]?.innerText.trim(),
-            valorUnitario: colunas[3]?.innerText.trim(),
-            valorTotal: colunas[4]?.innerText.trim()
-          };
-        });
-
-        return {
-          cnpj,
-          local,
-          orgao,
-          unidadeCompradora,
-          modalidade,
-          tipo,
-          modoDisputa,
-          registroPreco,
-          fonteOrcamentaria,
-          dataDivulgacao,
-          situacao,
-          dataInicioRecebimento,
-          dataFimRecebimento,
-          valorTotal,
-          objetoDetalhado,
-          itens
-        };
+      const response = await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 60000
       });
 
-      resultados.push({ ...edital, ...detalhes });
+      // Verifica status HTTP
+      if (!response || !response.ok()) {
+        throw new Error(`Status HTTP inválido: ${response?.status()}`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const editais = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('a.br-item'));
+        return cards.map(card => {
+          const texto = card.innerText;
+          const titulo = texto.match(/Edital nº\s+(.+?)\n/)?.[1]?.trim();
+          const idPNCP = texto.match(/Id contratação PNCP:\s*(.+?)\n/)?.[1]?.trim();
+          const modalidade = texto.match(/Modalidade da Contratação:\s*(.+?)\n/)?.[1]?.trim();
+          const ultimaAtualizacao = texto.match(/Última Atualização:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1];
+          const orgao = texto.match(/Órgão:\s*(.+?)\n/)?.[1]?.trim();
+          const local = texto.match(/Local:\s*(.+?)\n/)?.[1]?.trim();
+          const objeto = texto.match(/Objeto:\s*(.+)/)?.[1]?.trim();
+          const href = card.getAttribute('href');
+
+          return {
+            titulo,
+            idPNCP,
+            modalidade,
+            ultimaAtualizacao,
+            orgao,
+            local,
+            objeto,
+            linkDetalhe: 'https://pncp.gov.br' + href
+          };
+        });
+      });
+
+      if (!editais || editais.length === 0) {
+        console.log('Nenhum edital encontrado nesta página.');
+        break;
+      } else {
+        resultados.push(...editais);
+      }
+
+      pagina++;
     } catch (err) {
-      console.error(`Erro ao acessar ${edital.linkDetalhe}:`, err.message);
+      console.error(`Erro na página ${pagina}:`, err.message);
+      break;
     }
   }
 
-  const pathDetalhes = path.join(pasta, 'editais_detalhados.json');
-  await fs.writeJson(pathDetalhes, resultados, { spaces: 2 });
-  console.log(`Salvo em ${pathDetalhes} - Total: ${resultados.length}`);
-})();
+  await browser.close();
+
+  const caminhoFinal = path.join(pastaDestino, 'editais_lista.json');
+  await fs.writeJson(caminhoFinal, resultados, { spaces: 2 });
+  console.log(`Coleta finalizada. Total de editais: ${resultados.length}`);
+  console.log(`Salvo em: ${caminhoFinal}`);
+}
+
+coletarTodosEditais();
